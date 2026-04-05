@@ -44,9 +44,9 @@ def _algo_forge_tracer(frame, event, arg):
             
         sys._algo_forge_timeline.append({
             "event": event,
-            "line": frame.f_lineno,
+            "lineNumber": frame.f_lineno,
             "func": func_name,
-            "locals": clean_locals
+            "variables": clean_locals
         })
         
     return _algo_forge_tracer

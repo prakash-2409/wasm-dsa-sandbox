@@ -1,5 +1,6 @@
-import React from "react";
-import Editor from "@monaco-editor/react";
+import React, { useRef, useEffect } from "react";
+import Editor, { type OnMount } from "@monaco-editor/react";
+import { useStore } from "../store/useStore";
 
 interface EditorPaneProps {
   code: string;
@@ -7,31 +8,51 @@ interface EditorPaneProps {
   isRunning: boolean;
 }
 
-// Default starter code for new users
-export const DEFAULT_CODE = `# 🐍 AlgoForge — Write Python here
-# Your code runs entirely in your browser via WebAssembly!
-
-def fibonacci(n: int) -> list[int]:
-    """Generate the first n Fibonacci numbers."""
-    if n <= 0:
-        return []
-    
-    fib = [0, 1]
-    for _ in range(2, n):
-        fib.append(fib[-1] + fib[-2])
-    
-    return fib[:n]
-
-
-# Run it!
-result = fibonacci(15)
-print("Fibonacci sequence:")
-print(result)
-print(f"\\nSum: {sum(result)}")
-print(f"Count: {len(result)}")
-`;
-
 const EditorPane: React.FC<EditorPaneProps> = ({ code, onChange, isRunning }) => {
+  const { executionTimeline, scrubberIndex } = useStore();
+  
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const editorRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const monacoRef = useRef<any>(null);
+  const decoratorsRef = useRef<string[]>([]); // old decorations
+
+  const handleEditorDidMount: OnMount = (editor, monaco) => {
+    editorRef.current = editor;
+    monacoRef.current = monaco;
+  };
+
+  useEffect(() => {
+    if (!editorRef.current || !monacoRef.current) return;
+
+    if (!executionTimeline || executionTimeline.length === 0) {
+      if (decoratorsRef.current.length > 0) {
+        decoratorsRef.current = editorRef.current.deltaDecorations(decoratorsRef.current, []);
+      }
+      return;
+    }
+
+    const currentFrame = executionTimeline[scrubberIndex];
+    if (currentFrame && currentFrame.lineNumber) {
+      decoratorsRef.current = editorRef.current.deltaDecorations(
+        decoratorsRef.current,
+        [
+          {
+            range: new monacoRef.current.Range(currentFrame.lineNumber, 1, currentFrame.lineNumber, 1),
+            options: {
+              isWholeLine: true,
+              className: "visualizer-active-line",
+              marginClassName: "visualizer-active-margin"
+            }
+          }
+        ]
+      );
+      
+      // Optionally reveal the line if it's off-screen while scrubbing
+      editorRef.current.revealLineInCenterIfOutsideViewport(currentFrame.lineNumber);
+    }
+  }, [executionTimeline, scrubberIndex]);
+
   return (
     <div className="flex flex-col h-full" id="editor-pane">
       {/* Editor Header */}
@@ -66,6 +87,7 @@ const EditorPane: React.FC<EditorPaneProps> = ({ code, onChange, isRunning }) =>
           language="python"
           theme="vs-dark"
           value={code}
+          onMount={handleEditorDidMount}
           onChange={(value) => onChange(value ?? "")}
           options={{
             fontSize: 14,

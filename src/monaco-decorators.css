@@ -1,0 +1,10 @@
+.visualizer-active-line {
+  background-color: rgba(168, 85, 247, 0.15) !important;
+  box-shadow: inset 2px 0 0px 0px #a855f7 !important;
+}
+
+.visualizer-active-margin {
+  background-color: rgba(168, 85, 247, 0.1) !important;
+  color: #a855f7 !important;
+  font-weight: bold;
+}
