@@ -1,5 +1,7 @@
 import React from "react";
 import type { PyodideStatus } from "../hooks/usePyodide";
+import { useStore } from "../store/useStore";
+import { problems } from "../data/problems";
 
 interface HeaderProps {
   status: PyodideStatus;
@@ -10,6 +12,8 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ status, isRunning, onRun, onClear }) => {
   const canRun = status === "ready" && !isRunning;
+  
+  const { activeProblemId, setActiveProblem, solvedProblems } = useStore();
 
   return (
     <header
@@ -36,6 +40,32 @@ const Header: React.FC<HeaderProps> = ({ status, isRunning, onRun, onClear }) =>
           <p className="text-[10px] font-medium tracking-wider uppercase" style={{ color: "var(--color-text-muted)" }}>
             In-Browser Python · WebAssembly
           </p>
+        </div>
+      </div>
+
+      {/* Primary Navigation / Problem Selector */}
+      <div className="flex items-center gap-4">
+        <div className="relative">
+          <select 
+            value={activeProblemId}
+            onChange={(e) => setActiveProblem(e.target.value)}
+            className="appearance-none bg-[#16161e] border border-[#2a2a3a] text-[#e4e4ed] text-sm font-medium rounded-lg px-4 py-1.5 pr-10 focus:outline-none focus:ring-1 focus:ring-violet-500 cursor-pointer transition-colors hover:bg-[#1e1e2a]"
+          >
+            {problems.map((prob) => {
+              const isSolved = solvedProblems.includes(prob.id);
+              return (
+                <option key={prob.id} value={prob.id}>
+                  {isSolved ? "✅ " : "☐ "} {prob.title}
+                </option>
+              );
+            })}
+          </select>
+          {/* Custom Chevron for select */}
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-400">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </div>
         </div>
       </div>
 

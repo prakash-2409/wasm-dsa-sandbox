@@ -5,11 +5,21 @@ import TerminalPane from "./components/TerminalPane";
 import ProblemPane from "./components/ProblemPane";
 import { usePyodide } from "./hooks/usePyodide";
 import { problems } from "./data/problems";
+import { useStore } from "./store/useStore";
 
 function App() {
-  // Load the first problem as default
-  const [currentProblem] = useState(problems[0]);
-  const [code, setCode] = useState(currentProblem.starterCode);
+  const { activeProblemId, userCode, updateUserCode, markProblemSolved } = useStore();
+  
+  // Resolve current problem object
+  const currentProblem = problems.find(p => p.id === activeProblemId) || problems[0];
+  
+  // The editor's text value falls back to starter code if undefined
+  const code = userCode[activeProblemId] !== undefined ? userCode[activeProblemId] : currentProblem.starterCode;
+  
+  const handleCodeChange = (newCode: string) => {
+    updateUserCode(activeProblemId, newCode);
+  };
+
   const { status, loadProgress, output, runCode, clearOutput, isRunning } = usePyodide();
 
   // Resizable split panes state
@@ -18,7 +28,7 @@ function App() {
   const [isDraggingHorizontal, setIsDraggingHorizontal] = useState(false);
   const [isDraggingVertical, setIsDraggingVertical] = useState(false);
 
-  const handleRun = useCallback(() => {
+  const handleRun = useCallback(async () => {
     if (status !== "ready" || isRunning) return;
 
     // Construct the hidden testing harness string
@@ -34,6 +44,7 @@ function App() {
       testExecutionString += `    print(f"✅ Test Case ${tc.id} Passed")\n`;
     });
 
+    // Special exact phrase to trigger markProblemSolved
     testExecutionString += `    print(f"\\n🎯 SUCCESS! All {pass_count}/${currentProblem.testCases.length} tests passed.")\n`;
     testExecutionString += `except AssertionError as e:\n`;
     testExecutionString += `    print(f"\\n❌ {e}")\n`;
@@ -45,8 +56,18 @@ function App() {
     // Concatenate user code with test harness
     const finalPyCode = `${code}\n${testExecutionString}`;
     
-    runCode(finalPyCode);
+    await runCode(finalPyCode);
   }, [code, status, isRunning, runCode, currentProblem]);
+
+  // Read output to intercept SUCCESS triggers
+  useEffect(() => {
+    if (output.length > 0) {
+      const lastLine = output[output.length - 1];
+      if (lastLine.stream === "stdout" && lastLine.text.includes("🎯 SUCCESS! All")) {
+        markProblemSolved(activeProblemId);
+      }
+    }
+  }, [output, activeProblemId, markProblemSolved]);
 
   // Ctrl+Enter keyboard shortcut for running code
   useEffect(() => {
@@ -130,7 +151,7 @@ function App() {
         >
           {/* Top: Editor */}
           <div style={{ height: `${topHeightPercent}%` }}>
-            <EditorPane code={code} onChange={setCode} isRunning={isRunning} />
+            <EditorPane code={code} onChange={handleCodeChange} isRunning={isRunning} />
           </div>
 
           {/* Drag Handle (Vertical) */}

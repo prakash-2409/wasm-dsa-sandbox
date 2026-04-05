@@ -56,4 +56,85 @@ export const problems: Problem[] = [
       { id: 3, inputArguments: "[3, 3], 6", expectedOutput: "[0, 1]" },
     ],
   },
+  {
+    id: "valid-palindrome",
+    title: "125. Valid Palindrome",
+    difficulty: "Easy",
+    functionName: "isPalindrome",
+    descriptionHtml: `
+      <p class="text-gray-300 mb-4">
+        A phrase is a <strong>palindrome</strong> if, after converting all uppercase letters into lowercase letters and removing all non-alphanumeric characters, it reads the same forward and backward. Alphanumeric characters include letters and numbers.
+      </p>
+      <p class="text-gray-300 mb-4">
+        Given a string <code>s</code>, return <code>True</code><em> if it is a <strong>palindrome</strong>, or </em><code>False</code><em> otherwise</em>.
+      </p>
+      
+      <div class="mt-6 mb-4">
+        <h3 class="font-semibold text-white mb-2">Example 1:</h3>
+        <pre class="bg-[#1e1e2e] p-3 rounded-lg border border-[#2a2a3a] text-sm font-mono text-gray-300">
+<strong>Input:</strong> s = "A man, a plan, a canal: Panama"
+<strong>Output:</strong> True
+<strong>Explanation:</strong> "amanaplanacanalpanama" is a palindrome.</pre>
+      </div>
+
+      <div class="mb-4">
+        <h3 class="font-semibold text-white mb-2">Example 2:</h3>
+        <pre class="bg-[#1e1e2e] p-3 rounded-lg border border-[#2a2a3a] text-sm font-mono text-gray-300">
+<strong>Input:</strong> s = "race a car"
+<strong>Output:</strong> False
+<strong>Explanation:</strong> "raceacar" is not a palindrome.</pre>
+      </div>
+    `,
+    starterCode: `def isPalindrome(s: str) -> bool:
+    # Write your solution here
+    pass
+`,
+    testCases: [
+      { id: 1, inputArguments: "\"A man, a plan, a canal: Panama\"", expectedOutput: "True" },
+      { id: 2, inputArguments: "\"race a car\"", expectedOutput: "False" },
+      { id: 3, inputArguments: "\" \"", expectedOutput: "True" },
+    ],
+  },
+  {
+    id: "fibonacci-number",
+    title: "509. Fibonacci Number",
+    difficulty: "Easy",
+    functionName: "fib",
+    descriptionHtml: `
+      <p class="text-gray-300 mb-4">
+        The <strong>Fibonacci numbers</strong>, commonly denoted <code>F(n)</code> form a sequence, called the <strong>Fibonacci sequence</strong>, such that each number is the sum of the two preceding ones, starting from <code>0</code> and <code>1</code>. That is,
+      </p>
+      <pre class="bg-[#1e1e2e] p-3 rounded-lg border border-[#2a2a3a] text-sm font-mono text-gray-300 mb-4">
+F(0) = 0, F(1) = 1
+F(n) = F(n - 1) + F(n - 2), for n > 1.</pre>
+      <p class="text-gray-300 mb-4">
+        Given <code>n</code>, calculate <code>F(n)</code>.
+      </p>
+      
+      <div class="mt-6 mb-4">
+        <h3 class="font-semibold text-white mb-2">Example 1:</h3>
+        <pre class="bg-[#1e1e2e] p-3 rounded-lg border border-[#2a2a3a] text-sm font-mono text-gray-300">
+<strong>Input:</strong> n = 2
+<strong>Output:</strong> 1
+<strong>Explanation:</strong> F(2) = F(1) + F(0) = 1 + 0 = 1.</pre>
+      </div>
+
+      <div class="mb-4">
+        <h3 class="font-semibold text-white mb-2">Example 2:</h3>
+        <pre class="bg-[#1e1e2e] p-3 rounded-lg border border-[#2a2a3a] text-sm font-mono text-gray-300">
+<strong>Input:</strong> n = 3
+<strong>Output:</strong> 2
+<strong>Explanation:</strong> F(3) = F(2) + F(1) = 1 + 1 = 2.</pre>
+      </div>
+    `,
+    starterCode: `def fib(n: int) -> int:
+    # Write your solution here
+    pass
+`,
+    testCases: [
+      { id: 1, inputArguments: "2", expectedOutput: "1" },
+      { id: 2, inputArguments: "3", expectedOutput: "2" },
+      { id: 3, inputArguments: "4", expectedOutput: "3" },
+    ],
+  }
 ];
