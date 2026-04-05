@@ -20,7 +20,7 @@ function App() {
     updateUserCode(activeProblemId, newCode);
   };
 
-  const { status, loadProgress, output, runCode, clearOutput, isRunning } = usePyodide();
+  const { status, loadProgress, output, runCode, terminate, clearOutput, isRunning } = usePyodide();
 
   // Resizable split panes state
   const [leftWidthPercent, setLeftWidthPercent] = useState(40);
@@ -121,6 +121,7 @@ function App() {
         status={status}
         isRunning={isRunning}
         onRun={handleRun}
+        onStop={terminate}
         onClear={clearOutput}
       />
 

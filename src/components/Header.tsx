@@ -7,10 +7,11 @@ interface HeaderProps {
   status: PyodideStatus;
   isRunning: boolean;
   onRun: () => void;
+  onStop: () => void;
   onClear: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ status, isRunning, onRun, onClear }) => {
+const Header: React.FC<HeaderProps> = ({ status, isRunning, onRun, onStop, onClear }) => {
   const canRun = status === "ready" && !isRunning;
   
   const { activeProblemId, setActiveProblem, solvedProblems } = useStore();
@@ -90,6 +91,20 @@ const Header: React.FC<HeaderProps> = ({ status, isRunning, onRun, onClear }) =>
         >
           Clear Output
         </button>
+
+        {/* Stop Button */}
+        {isRunning && (
+          <button
+            onClick={onStop}
+            className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-bold bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-colors duration-200 shadow-[0_0_10px_rgba(239,68,68,0.2)] hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] cursor-pointer"
+            id="stop-code-btn"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <rect x="6" y="6" width="12" height="12" rx="2" ry="2"></rect>
+            </svg>
+            Stop ⏹️
+          </button>
+        )}
 
         {/* Run Button */}
         <button

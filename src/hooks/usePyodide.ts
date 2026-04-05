@@ -1,11 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
-/**
- * Pyodide execution engine status.
- * FUTURE: This hook is designed for easy refactoring into a Web Worker.
- * The public API (loadingState, runCode, output) remains the same —
- * only the internal execution bridge needs to change.
- */
 export type PyodideStatus = "loading" | "ready" | "running" | "error";
 
 export interface TerminalLine {
@@ -14,22 +8,14 @@ export interface TerminalLine {
 }
 
 export interface UsePyodideReturn {
-  /** Current lifecycle status of the Pyodide engine */
   status: PyodideStatus;
-  /** Percentage estimate of loading progress (0–100) */
   loadProgress: number;
-  /** Terminal output lines with stream metadata */
   output: TerminalLine[];
-  /** Execute a Python code string */
   runCode: (code: string) => Promise<void>;
-  /** Clear terminal output */
+  terminate: () => void;
   clearOutput: () => void;
-  /** Whether the engine is currently executing code */
   isRunning: boolean;
 }
-
-// CDN URL for Pyodide (MVP: loaded from jsdelivr)
-const PYODIDE_CDN = "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/";
 
 export function usePyodide(): UsePyodideReturn {
   const [status, setStatus] = useState<PyodideStatus>("loading");
@@ -37,125 +23,117 @@ export function usePyodide(): UsePyodideReturn {
   const [output, setOutput] = useState<TerminalLine[]>([]);
   const [isRunning, setIsRunning] = useState(false);
 
-  // Ref to hold the pyodide instance across renders
+  const workerRef = useRef<Worker | null>(null);
+  const runTimeoutRef = useRef<number | null>(null);
+  
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pyodideRef = useRef<any>(null);
+  const runPromiseRef = useRef<{ resolve: () => void; reject: (err: any) => void } | null>(null);
 
-  /** Append a line to terminal output */
   const appendOutput = useCallback((text: string, stream: TerminalLine["stream"]) => {
     setOutput((prev) => [...prev, { text, stream }]);
   }, []);
 
-  /** Clear all terminal output */
   const clearOutput = useCallback(() => {
     setOutput([]);
   }, []);
 
-  // ── Initialize Pyodide on mount ──
-  useEffect(() => {
-    let cancelled = false;
-
-    async function initPyodide() {
-      try {
-        setLoadProgress(10);
-        appendOutput("⏳ Loading Python environment from CDN...", "system");
-
-        // Dynamically load the Pyodide script from CDN
-        setLoadProgress(20);
-        const script = document.createElement("script");
-        script.src = `${PYODIDE_CDN}pyodide.js`;
-        script.async = true;
-
-        await new Promise<void>((resolve, reject) => {
-          script.onload = () => resolve();
-          script.onerror = () => reject(new Error("Failed to load Pyodide script from CDN"));
-          document.head.appendChild(script);
-        });
-
-        if (cancelled) return;
-        setLoadProgress(50);
-        appendOutput("📦 Initializing WebAssembly runtime...", "system");
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const loadPyodide = (window as any).loadPyodide;
-        if (!loadPyodide) {
-          throw new Error("loadPyodide not found on window after script load");
-        }
-
-        const pyodide = await loadPyodide({
-          indexURL: PYODIDE_CDN,
-          stdout: (text: string) => {
-            appendOutput(text, "stdout");
-          },
-          stderr: (text: string) => {
-            appendOutput(text, "stderr");
-          },
-        });
-
-        if (cancelled) return;
-        setLoadProgress(90);
-
-        // Pre-warm: run a trivial script to ensure Python is fully booted
-        await pyodide.runPythonAsync("import sys");
-
-        if (cancelled) return;
-        pyodideRef.current = pyodide;
+  const initWorker = useCallback(() => {
+    // If a worker currently exists, terminate it (graceful restart check)
+    if (workerRef.current) {
+      workerRef.current.terminate();
+    }
+    
+    setStatus("loading");
+    setLoadProgress(10);
+    appendOutput("⏳ Spinning up isolated Python Web Worker...", "system");
+    
+    // Critical Vite Worker Syntax
+    const worker = new Worker(new URL('../workers/pyodideWorker.ts', import.meta.url), { type: 'module' });
+    workerRef.current = worker;
+    
+    worker.onmessage = (e) => {
+      const { type, stream, text, version, error } = e.data;
+      if (type === "ready") {
         setLoadProgress(100);
         setStatus("ready");
-        appendOutput(`✅ Python ${pyodide.version} ready (Pyodide WebAssembly)`, "system");
-      } catch (err) {
-        if (cancelled) return;
-        setStatus("error");
-        appendOutput(`❌ Failed to initialize Python: ${(err as Error).message}`, "stderr");
-      }
-    }
-
-    initPyodide();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [appendOutput]);
-
-  // ── Execute user code ──
-  const runCode = useCallback(
-    async (code: string) => {
-      const pyodide = pyodideRef.current;
-      if (!pyodide || status !== "ready") {
-        appendOutput("⚠️  Python environment is not ready yet.", "stderr");
-        return;
-      }
-
-      setIsRunning(true);
-      setStatus("running");
-      clearOutput();
-      appendOutput("▶ Running...", "system");
-
-      const startTime = performance.now();
-
-      try {
-        await pyodide.runPythonAsync(code);
-        const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
-        appendOutput(`\n✅ Finished in ${elapsed}s`, "system");
-      } catch (err) {
-        const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
-        // Extract the Python traceback from the error
-        const errorMessage = (err as Error).message || String(err);
-        appendOutput(`\n${errorMessage}`, "stderr");
-        appendOutput(`\n❌ Exited with error after ${elapsed}s`, "system");
-      } finally {
+        appendOutput(`✅ Python ${version} ready (Isolated Thread)`, "system");
+      } else if (type === "output") {
+        appendOutput(text, stream);
+      } else if (type === "done") {
         setIsRunning(false);
         setStatus("ready");
+        if (runTimeoutRef.current) clearTimeout(runTimeoutRef.current);
+        if (runPromiseRef.current) {
+          runPromiseRef.current.resolve();
+          runPromiseRef.current = null;
+        }
+      } else if (type === "error") {
+        setStatus("error");
+        appendOutput(`❌ Initialization Error: ${error}`, "stderr");
       }
-    },
-    [status, appendOutput, clearOutput],
-  );
+    };
+    
+    // Kickstart the CDN load from within the worker
+    worker.postMessage({ type: "init" });
+  }, [appendOutput]);
+
+  // Mount logic
+  useEffect(() => {
+    initWorker();
+    return () => {
+      if (workerRef.current) workerRef.current.terminate();
+      if (runTimeoutRef.current) clearTimeout(runTimeoutRef.current);
+    };
+  }, [initWorker]);
+
+  // The Kill Switch
+  const terminate = useCallback(() => {
+    if (workerRef.current) {
+      workerRef.current.terminate();
+      setIsRunning(false);
+      appendOutput("\n\n🛑 [Execution Terminated] Infinite loop prevented by Kill Switch.", "stderr");
+      
+      if (runTimeoutRef.current) clearTimeout(runTimeoutRef.current);
+      if (runPromiseRef.current) {
+        // Resolve early so the awaiter in the UI doesn't hang forever
+        runPromiseRef.current.resolve();
+        runPromiseRef.current = null;
+      }
+      
+      // Spawn a fresh, clean worker immediately so the user can continue
+      initWorker();
+    }
+  }, [appendOutput, initWorker]);
+
+  const runCode = useCallback(async (code: string) => {
+    if (!workerRef.current || status !== "ready") {
+      appendOutput("⚠️ Python environment is not ready.", "stderr");
+      return;
+    }
+
+    setIsRunning(true);
+    setStatus("running");
+    clearOutput();
+    appendOutput("▶ Submitting task to Main Worker...", "system");
+    
+    return new Promise<void>((resolve, reject) => {
+      runPromiseRef.current = { resolve, reject };
+      
+      workerRef.current!.postMessage({ type: "run", code });
+      
+      // 5-Second Auto-Timeout Kill Switch
+      runTimeoutRef.current = window.setTimeout(() => {
+        terminate();
+      }, 5000);
+    });
+  }, [status, clearOutput, appendOutput, terminate]);
 
   return {
     status,
     loadProgress,
     output,
     runCode,
+    terminate,
     clearOutput,
     isRunning,
   };
