@@ -1,3 +1,23 @@
+# ⚡️ AlgoForge: The Zero-Server DSA Platform
+
+AlgoForge is a lightning-fast, fully local Data Structures and Algorithms (DSA) execution sandbox. 
+
+Unlike traditional platforms (like LeetCode or HackerRank) that rely on expensive cloud servers and Docker containers to execute user code, **AlgoForge runs 100% inside the browser.**
+
+### ✨ The "No Cloud" Architecture
+By leveraging **WebAssembly (Wasm)** and **Pyodide**, this platform boots a native Python runtime directly inside your Chrome or Safari tab. 
+
+* **Zero Backend:** No Node.js execution servers, no AWS Lambda, no Docker.
+* **Zero Cost:** Compute power is offloaded entirely to the user's local machine memory.
+* **Instant Execution:** Code evaluates in milliseconds (<0.05s) because there is no network latency.
+* **Secure Sandbox:** Untrusted code runs safely confined within the browser's V8 engine sandbox.
+
+### 🛠 Tech Stack
+* **Frontend:** React + TypeScript + Vite
+* **Editor:** Monaco Editor (VS Code Core)
+* **Execution Engine:** Pyodide (Python compiled to WebAssembly)
+* **Styling:** Tailwind CSS v4 
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
