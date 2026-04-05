@@ -52,13 +52,17 @@ export function usePyodide(): UsePyodideReturn {
     workerRef.current = worker;
     
     worker.onmessage = (e) => {
-      const { type, stream, text, version, error } = e.data;
+      const { type, stream, text, version, error, data } = e.data;
       if (type === "ready") {
         setLoadProgress(100);
         setStatus("ready");
         appendOutput(`✅ Python ${version} ready (Isolated Thread)`, "system");
       } else if (type === "output") {
         appendOutput(text, stream);
+      } else if (type === "timeline") {
+        import("../store/useStore").then(({ useStore }) => {
+          useStore.getState().setExecutionTimeline(data);
+        });
       } else if (type === "done") {
         setIsRunning(false);
         setStatus("ready");

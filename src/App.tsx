@@ -3,6 +3,7 @@ import Header from "./components/Header";
 import EditorPane from "./components/EditorPane";
 import TerminalPane from "./components/TerminalPane";
 import ProblemPane from "./components/ProblemPane";
+import VisualizerPane from "./components/VisualizerPane";
 import { usePyodide } from "./hooks/usePyodide";
 import { problems } from "./data/problems";
 import { useStore } from "./store/useStore";
@@ -27,6 +28,9 @@ function App() {
   const [topHeightPercent, setTopHeightPercent] = useState(60);
   const [isDraggingHorizontal, setIsDraggingHorizontal] = useState(false);
   const [isDraggingVertical, setIsDraggingVertical] = useState(false);
+  
+  // Tab UI State
+  const [bottomTab, setBottomTab] = useState<"terminal" | "visualizer">("terminal");
 
   const handleRun = useCallback(async () => {
     if (status !== "ready" || isRunning) return;
@@ -164,14 +168,40 @@ function App() {
             <div className="h-0.5 w-8 rounded-full bg-gray-600 group-hover:bg-white" />
           </div>
 
-          {/* Bottom: Terminal */}
-          <div style={{ height: `${100 - topHeightPercent}%` }}>
-            <TerminalPane
-              output={output}
-              status={status}
-              loadProgress={loadProgress}
-              onClear={clearOutput}
-            />
+          {/* Bottom: Tabs */}
+          <div style={{ height: `${100 - topHeightPercent}%` }} className="flex flex-col bg-[#16161e]">
+            {/* Tab Header */}
+            <div className="flex bg-[#1e1e2e] border-y border-[#2a2a3a] px-2 pt-2 gap-2 flex-shrink-0 relative overflow-hidden">
+              <button 
+                onClick={() => setBottomTab("terminal")}
+                className={`px-4 py-1.5 text-xs font-bold rounded-t-lg transition-colors ${bottomTab === "terminal" ? 'bg-[#16161e] text-[#e4e4ed] border-t border-x border-[#2a2a3a]' : 'text-gray-500 hover:text-gray-300'}`}
+              >
+                Terminal
+              </button>
+              <button 
+                onClick={() => setBottomTab("visualizer")}
+                className={`px-4 py-1.5 text-xs flex items-center justify-center font-bold rounded-t-lg transition-colors ${bottomTab === "visualizer" ? 'bg-[#16161e] text-purple-400 border-t border-x border-[#2a2a3a]' : 'text-gray-500 hover:text-gray-300'}`}
+              >
+                <svg className="w-3.5 h-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Visualizer (Debugger)
+              </button>
+            </div>
+
+            {/* Tab Content */}
+            <div className="flex-1 min-h-0 bg-[#16161e]">
+               {bottomTab === "terminal" ? (
+                 <TerminalPane
+                   output={output}
+                   status={status}
+                   loadProgress={loadProgress}
+                   onClear={clearOutput}
+                 />
+               ) : (
+                 <VisualizerPane />
+               )}
+            </div>
           </div>
         </div>
       </div>
