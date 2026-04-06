@@ -4,6 +4,8 @@ import EditorPane from "./components/EditorPane";
 import TerminalPane from "./components/TerminalPane";
 import ProblemPane from "./components/ProblemPane";
 import VisualizerPane from "./components/VisualizerPane";
+import MobileOverlay from "./components/MobileOverlay";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { usePyodide } from "./hooks/usePyodide";
 import { problems } from "./data/problems";
 import { useStore } from "./store/useStore";
@@ -135,6 +137,9 @@ function App() {
 
   return (
     <div className="flex flex-col h-screen w-screen" style={{ background: "var(--color-bg-primary)" }}>
+      {/* Mobile Guardrail */}
+      <MobileOverlay />
+
       {/* Header */}
       <Header
         status={status}
@@ -171,7 +176,9 @@ function App() {
         >
           {/* Top: Editor */}
           <div style={{ height: `${topHeightPercent}%` }}>
-            <EditorPane code={code} onChange={handleCodeChange} isRunning={isRunning} />
+            <ErrorBoundary fallbackName="Code Editor">
+              <EditorPane code={code} onChange={handleCodeChange} isRunning={isRunning} />
+            </ErrorBoundary>
           </div>
 
           {/* Drag Handle (Vertical) */}
@@ -214,7 +221,9 @@ function App() {
                    onClear={clearOutput}
                  />
                ) : (
-                 <VisualizerPane />
+                 <ErrorBoundary fallbackName="Visualizer Engine">
+                   <VisualizerPane />
+                 </ErrorBoundary>
                )}
             </div>
           </div>
