@@ -7,10 +7,25 @@ import VisualizerPane from "./components/VisualizerPane";
 import { usePyodide } from "./hooks/usePyodide";
 import { problems } from "./data/problems";
 import { useStore } from "./store/useStore";
+import { decodeCodeFromURL } from "./utils/share";
 
 function App() {
   const { activeProblemId, userCode, updateUserCode, markProblemSolved } = useStore();
   
+  // Hydrate code from URL on app mount
+  useEffect(() => {
+    const sharedCode = decodeCodeFromURL();
+    if (sharedCode) {
+      updateUserCode(activeProblemId, sharedCode);
+      
+      // Clear the URL so we don't accidentally re-hydrate on refresh
+      const newUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+    // Only run on mount, ignore dep warnings to prevent looping
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Resolve current problem object
   const currentProblem = problems.find(p => p.id === activeProblemId) || problems[0];
   

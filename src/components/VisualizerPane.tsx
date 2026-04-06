@@ -43,6 +43,20 @@ const VisualizerPane: React.FC = () => {
   return (
     <div className="flex flex-col h-full bg-[#16161e] border-l border-t border-[var(--color-border)] select-none font-sans">
       
+      {/* Metrics Dashboard */}
+      <div className="flex items-center gap-4 px-6 py-3 border-b border-[#2a2a3a] bg-[#1a1a24]">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">Total Operations:</span>
+          <span className="text-xs font-mono font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">{executionTimeline.length}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">Max Stack Depth:</span>
+          <span className="text-xs font-mono font-bold text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+            {Math.max(0, ...executionTimeline.map(t => t.callStack ? t.callStack.length : 0))}
+          </span>
+        </div>
+      </div>
+
       {/* Main Content Split: Variables | Call Stack */}
       <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-3 bg-[#0f0f15]">
         

@@ -1,6 +1,7 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import Editor, { type OnMount } from "@monaco-editor/react";
 import { useStore } from "../store/useStore";
+import { generateHeatmap } from "../utils/profiler";
 
 interface EditorPaneProps {
   code: string;
@@ -15,7 +16,8 @@ const EditorPane: React.FC<EditorPaneProps> = ({ code, onChange, isRunning }) =>
   const editorRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const monacoRef = useRef<any>(null);
-  const decoratorsRef = useRef<string[]>([]); // old decorations
+  const decoratorsRef = useRef<string[]>([]); // active line and heatmap decorations
+  const [heatmapCSS, setHeatmapCSS] = useState<string>("");
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
@@ -29,32 +31,68 @@ const EditorPane: React.FC<EditorPaneProps> = ({ code, onChange, isRunning }) =>
       if (decoratorsRef.current.length > 0) {
         decoratorsRef.current = editorRef.current.deltaDecorations(decoratorsRef.current, []);
       }
+      setHeatmapCSS("");
       return;
     }
 
+    // Generate heatmap data
+    const heatmap = generateHeatmap(executionTimeline);
+    
+    // Build dynamic CSS classes for intensities
+    let cssRules = "";
+    Object.entries(heatmap.frequencies).forEach(([lineStr, count]) => {
+      const line = parseInt(lineStr);
+      let intensity = count / heatmap.maxFrequency;
+      
+      // Scale intensity slightly to make sure even low-frequency lines are visible
+      // but max intensity doesn't completely block text
+      const alpha = Math.min(0.4, Math.max(0.05, intensity * 0.4)).toFixed(3);
+      cssRules += `.heatmap-line-${line} { background-color: rgba(239, 68, 68, ${alpha}) !important; }\n`;
+    });
+    setHeatmapCSS(cssRules);
+
+    // Build decorators list (heatmap + scrubber active line)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const decorationsToApply: any[] = [];
+
+    // 1. Add Heatmap Decorators
+    Object.keys(heatmap.frequencies).forEach(lineStr => {
+      const line = parseInt(lineStr);
+      decorationsToApply.push({
+        range: new monacoRef.current.Range(line, 1, line, 1),
+        options: {
+          isWholeLine: true,
+          className: `heatmap-line-${line}`,
+        }
+      });
+    });
+
+    // 2. Add Active Scrubber Line Decorator (if valid)
     const currentFrame = executionTimeline[scrubberIndex];
     if (currentFrame && currentFrame.lineNumber) {
-      decoratorsRef.current = editorRef.current.deltaDecorations(
-        decoratorsRef.current,
-        [
-          {
-            range: new monacoRef.current.Range(currentFrame.lineNumber, 1, currentFrame.lineNumber, 1),
-            options: {
-              isWholeLine: true,
-              className: "visualizer-active-line",
-              marginClassName: "visualizer-active-margin"
-            }
-          }
-        ]
-      );
-      
+      decorationsToApply.push({
+        range: new monacoRef.current.Range(currentFrame.lineNumber, 1, currentFrame.lineNumber, 1),
+        options: {
+          isWholeLine: true,
+          className: "visualizer-active-line",
+          marginClassName: "visualizer-active-margin"
+        }
+      });
       // Optionally reveal the line if it's off-screen while scrubbing
       editorRef.current.revealLineInCenterIfOutsideViewport(currentFrame.lineNumber);
     }
+
+    decoratorsRef.current = editorRef.current.deltaDecorations(
+      decoratorsRef.current,
+      decorationsToApply
+    );
+
   }, [executionTimeline, scrubberIndex]);
 
   return (
-    <div className="flex flex-col h-full" id="editor-pane">
+    <div className="flex flex-col h-full relative" id="editor-pane">
+      {heatmapCSS && <style>{heatmapCSS}</style>}
+      
       {/* Editor Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--color-border)]" style={{ background: "var(--color-bg-secondary)" }}>
         <div className="flex items-center gap-2">

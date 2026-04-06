@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import type { PyodideStatus } from "../hooks/usePyodide";
 import { useStore } from "../store/useStore";
 import { problems } from "../data/problems";
+import { encodeCodeToURL } from "../utils/share";
 
 interface HeaderProps {
   status: PyodideStatus;
@@ -14,7 +15,26 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ status, isRunning, onRun, onStop, onClear }) => {
   const canRun = status === "ready" && !isRunning;
   
-  const { activeProblemId, setActiveProblem, solvedProblems } = useStore();
+  const { activeProblemId, setActiveProblem, solvedProblems, userCode } = useStore();
+  const [showCopied, setShowCopied] = useState(false);
+
+  const handleShare = () => {
+    const currentProblem = problems.find(p => p.id === activeProblemId) || problems[0];
+    const codeToShare = userCode[activeProblemId] !== undefined ? userCode[activeProblemId] : currentProblem.starterCode;
+    const url = encodeCodeToURL(codeToShare);
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(url).then(() => {
+      // Update address bar silently
+      window.history.replaceState({}, document.title, url);
+      
+      // Show toast
+      setShowCopied(true);
+      setTimeout(() => setShowCopied(false), 2000);
+    }).catch(err => {
+      console.error("Failed to copy URL:", err);
+    });
+  };
 
   return (
     <header
@@ -71,7 +91,30 @@ const Header: React.FC<HeaderProps> = ({ status, isRunning, onRun, onStop, onCle
       </div>
 
       {/* Action Buttons */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 relative">
+        
+        {/* Share Button */}
+        <div className="relative">
+          <button
+            onClick={handleShare}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-200 hover:bg-[#2a2a3a] border border-transparent hover:border-[#3a3a4a] text-blue-400"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+              <polyline points="16 6 12 2 8 6"></polyline>
+              <line x1="12" y1="2" x2="12" y2="15"></line>
+            </svg>
+            Share
+          </button>
+          
+          {/* Toast Notification */}
+          {showCopied && (
+            <div className="absolute top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-green-500 text-white text-[10px] items-center justify-center font-bold rounded shadow-lg whitespace-nowrap z-50 animate-fade-in-up">
+              Copied URL!
+            </div>
+          )}
+        </div>
+
         {/* Clear Button */}
         <button
           onClick={onClear}
