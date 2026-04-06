@@ -127,15 +127,15 @@ sys.settrace(_algo_forge_tracer)
       self.postMessage({ type: "timeline", data: timelineData });
       
       const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
-      self.postMessage({ type: "output", stream: "system", text: \`\\n✅ Finished heavily isolated thread in \${elapsed}s\` });
+      self.postMessage({ type: "output", stream: "system", text: `\n✅ Finished heavily isolated thread in ${elapsed}s` });
       self.postMessage({ type: "done" });
     } catch (err: any) {
       // Unhook tracer in error cases
       await pyodide.runPythonAsync('sys.settrace(None)');
       
       const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
-      self.postMessage({ type: "output", stream: "stderr", text: \`\\n\${err.message || String(err)}\` });
-      self.postMessage({ type: "output", stream: "system", text: \`\\n❌ Exited with error after \${elapsed}s\` });
+      self.postMessage({ type: "output", stream: "stderr", text: `\n${err.message || String(err)}` });
+      self.postMessage({ type: "output", stream: "system", text: `\n❌ Exited with error after ${elapsed}s` });
       self.postMessage({ type: "done" });
     }
   }

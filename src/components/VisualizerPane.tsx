@@ -58,7 +58,7 @@ const VisualizerPane: React.FC = () => {
           </div>
 
           <AnimatePresence mode="popLayout">
-            {Object.entries(variables).map(([varName, val]) => {
+            {Object.entries(variables).map(([varName, val]: [string, any]) => {
               // 2D Array / Matrix
               if (Array.isArray(val) && val.length > 0 && Array.isArray(val[0])) {
                 return (
@@ -70,9 +70,9 @@ const VisualizerPane: React.FC = () => {
                   >
                     <div className="text-[10px] font-bold text-indigo-400 mb-3 font-mono uppercase tracking-wider">{varName} (matrix)</div>
                     <div className="flex flex-col gap-1.5 overflow-auto pb-2">
-                      {val.map((row, rIdx) => (
+                      {val.map((row: any, rIdx: number) => (
                         <div key={rIdx} className="flex gap-1.5">
-                          {row.map((cell, cIdx) => (
+                          {row.map((cell: any, cIdx: number) => (
                             <motion.div
                               layout
                               key={`${rIdx}-${cIdx}`}
@@ -101,7 +101,7 @@ const VisualizerPane: React.FC = () => {
                   >
                     <div className="text-[10px] font-bold text-blue-400 mb-4 font-mono uppercase tracking-wider">{varName} (list)</div>
                     <div className="flex flex-wrap gap-x-2 gap-y-12 px-1 pt-4 pb-8">
-                      {val.map((item, i) => (
+                      {val.map((item: any, i: number) => (
                         <div key={i} className="relative flex flex-col items-center">
                           <motion.div
                             layout
@@ -121,7 +121,7 @@ const VisualizerPane: React.FC = () => {
                           {/* Bottom: Pointers */}
                           <div className="absolute top-14 flex flex-col items-center gap-1">
                             <AnimatePresence>
-                              {pointers[i]?.map(ptr => (
+                              {pointers[i]?.map((ptr: string) => (
                                 <motion.div
                                   key={ptr}
                                   initial={{ opacity: 0, y: -10 }}
@@ -168,7 +168,7 @@ const VisualizerPane: React.FC = () => {
         
         <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar flex flex-col-reverse gap-3">
           <AnimatePresence mode="popLayout">
-            {callStack.map((frame, index) => {
+            {callStack.map((frame: StackFrame, index: number) => {
               const isTop = index === callStack.length - 1;
               return (
                 <motion.div
@@ -200,7 +200,7 @@ const VisualizerPane: React.FC = () => {
                   </div>
                   
                   <div className="space-y-1">
-                    {Object.entries(frame.args).map(([argName, argVal]) => (
+                    {Object.entries(frame.args).map(([argName, argVal]: [string, any]) => (
                       <div key={argName} className="flex justify-between text-[10px] font-mono">
                         <span className="text-gray-500">{argName}:</span>
                         <span className="text-gray-300">{JSON.stringify(argVal)}</span>
