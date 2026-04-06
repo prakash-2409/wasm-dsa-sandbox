@@ -2,19 +2,33 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { problems } from '../data/problems';
 
+export interface StackFrame {
+  name: string;
+  args: Record<string, any>;
+  returnValue: any | null;
+}
+
+export interface ExecutionSnapshot {
+  lineNumber: number;
+  variables: Record<string, any>;
+  callStack: StackFrame[];
+  event: string;
+  func: string;
+}
+
 interface AppState {
   activeProblemId: string;
   userCode: Record<string, string>;
   solvedProblems: string[];
   
   // Transient Timeline State
-  executionTimeline: any[];
+  executionTimeline: ExecutionSnapshot[];
   scrubberIndex: number;
   
   setActiveProblem: (id: string) => void;
   updateUserCode: (id: string, code: string) => void;
   markProblemSolved: (id: string) => void;
-  setExecutionTimeline: (timeline: any[]) => void;
+  setExecutionTimeline: (timeline: ExecutionSnapshot[]) => void;
   setScrubberIndex: (index: number) => void;
 }
 
@@ -43,7 +57,10 @@ export const useStore = create<AppState>()(
         return state;
       }),
 
-      setExecutionTimeline: (timeline) => set({ executionTimeline: timeline, scrubberIndex: 0 }),
+      setExecutionTimeline: (timeline) => set({ 
+        executionTimeline: timeline, 
+        scrubberIndex: timeline.length > 0 ? 0 : 0 
+      }),
       setScrubberIndex: (index) => set({ scrubberIndex: index })
     }),
     {

@@ -19,6 +19,7 @@ async function instantiate() {
   await pyodide.runPythonAsync(`
 import sys
 import json
+import copy
 
 def _algo_forge_tracer(frame, event, arg):
     # Ignore internal pyodide and library modules
@@ -28,26 +29,64 @@ def _algo_forge_tracer(frame, event, arg):
         
     func_name = frame.f_code.co_name
     
-    # Trace inside user functions, ignore the test harness <module> level stuff entirely
-    if event in ['line', 'return'] and func_name != "<module>":
-        clean_locals = {}
-        for k, v in frame.f_locals.items():
+    # Initialize timeline and call stack on sys if not exists
+    if not hasattr(sys, '_algo_forge_timeline'):
+        sys._algo_forge_timeline = []
+        sys._algo_forge_stack = []
+        
+    # We only care about user-defined functions
+    if func_name == "<module>":
+        return _algo_forge_tracer
+
+    def get_serializable_locals(local_vars):
+        clean = {}
+        for k, v in local_vars.items():
             if not k.startswith('__') and not callable(v) and str(type(v)) != "<class 'module'>":
                 try:
-                    # Deep copy by JSON stringification, avoiding memory references keeping final mutated state
-                    clean_locals[k] = json.loads(json.dumps(v))
+                    # Deep copy by JSON stringification
+                    clean[k] = json.loads(json.dumps(v))
                 except:
-                    clean_locals[k] = str(v)
+                    clean[k] = str(v)
+        return clean
+
+    def record_snapshot(current_event, current_arg=None):
+        # We need a deep copy of the stack at this point in time
+        stack_copy = json.loads(json.dumps(sys._algo_forge_stack))
         
-        if not hasattr(sys, '_algo_forge_timeline'):
-            sys._algo_forge_timeline = []
-            
+        # If this is a return event, the top of the stack should reflect the return value
+        if current_event == 'return' and stack_copy:
+            try:
+                stack_copy[-1]['returnValue'] = json.loads(json.dumps(current_arg))
+            except:
+                stack_copy[-1]['returnValue'] = str(current_arg)
+
         sys._algo_forge_timeline.append({
-            "event": event,
+            "event": current_event,
             "lineNumber": frame.f_lineno,
             "func": func_name,
-            "variables": clean_locals
+            "variables": get_serializable_locals(frame.f_locals),
+            "callStack": stack_copy
         })
+
+    if event == 'call':
+        # Push to stack
+        sys._algo_forge_stack.append({
+            "name": func_name,
+            "args": get_serializable_locals(frame.f_locals),
+            "returnValue": None
+        })
+        # We don't necessarily need a snapshot on EVERY call, usually 'line' is enough, 
+        # but for recursion depth, seeing the entry is nice.
+        record_snapshot('call')
+        
+    elif event == 'line':
+        record_snapshot('line')
+        
+    elif event == 'return':
+        # Capture return value in snapshot before popping
+        record_snapshot('return', arg)
+        if sys._algo_forge_stack:
+            sys._algo_forge_stack.pop()
         
     return _algo_forge_tracer
   `);
@@ -72,6 +111,7 @@ self.onmessage = async (event) => {
       await pyodide.runPythonAsync(`
 import sys
 sys._algo_forge_timeline = []
+sys._algo_forge_stack = []
 sys.settrace(_algo_forge_tracer)
       `);
       
@@ -87,15 +127,15 @@ sys.settrace(_algo_forge_tracer)
       self.postMessage({ type: "timeline", data: timelineData });
       
       const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
-      self.postMessage({ type: "output", stream: "system", text: `\n✅ Finished heavily isolated thread in ${elapsed}s` });
+      self.postMessage({ type: "output", stream: "system", text: \`\\n✅ Finished heavily isolated thread in \${elapsed}s\` });
       self.postMessage({ type: "done" });
     } catch (err: any) {
       // Unhook tracer in error cases
       await pyodide.runPythonAsync('sys.settrace(None)');
       
       const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
-      self.postMessage({ type: "output", stream: "stderr", text: `\n${err.message || String(err)}` });
-      self.postMessage({ type: "output", stream: "system", text: `\n❌ Exited with error after ${elapsed}s` });
+      self.postMessage({ type: "output", stream: "stderr", text: \`\\n\${err.message || String(err)}\` });
+      self.postMessage({ type: "output", stream: "system", text: \`\\n❌ Exited with error after \${elapsed}s\` });
       self.postMessage({ type: "done" });
     }
   }
