@@ -40,13 +40,27 @@ def _algo_forge_tracer(frame, event, arg):
 
     def get_serializable_locals(local_vars):
         clean = {}
+        # Only allow primitive, serializable types
+        serializable_types = (int, float, str, bool, type(None))
+        containers = (list, dict, tuple, set)
+        
         for k, v in local_vars.items():
-            if not k.startswith('__') and not callable(v) and str(type(v)) != "<class 'module'>":
+            if k.startswith('__'): continue
+            
+            # If it's a simple primitive
+            if isinstance(v, serializable_types):
+                clean[k] = v
+            # If it's a container, try to serialize it or convert to string if it fails
+            elif isinstance(v, containers):
                 try:
-                    # Deep copy by JSON stringification
-                    clean[k] = json.loads(json.dumps(v))
+                    # Test serialization
+                    dummy = json.dumps(v)
+                    clean[k] = json.loads(dummy)
                 except:
                     clean[k] = str(v)
+            else:
+                # Catch-all for functions, modules, classes, etc.
+                clean[k] = str(v)
         return clean
 
     def record_snapshot(current_event, current_arg=None):

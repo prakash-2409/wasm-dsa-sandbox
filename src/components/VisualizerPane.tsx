@@ -52,7 +52,7 @@ const VisualizerPane: React.FC = () => {
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">Max Stack Depth:</span>
           <span className="text-xs font-mono font-bold text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
-            {Math.max(0, ...executionTimeline.map(t => t.callStack ? t.callStack.length : 0))}
+            {Math.max(0, ...executionTimeline.map((t: any) => t.callStack ? t.callStack.length : 0))}
           </span>
         </div>
       </div>
